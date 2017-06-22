@@ -1,0 +1,319 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+```{r}
+queue_step(arrivals = as.numeric(df2$ArrivalTime[c(136,137,138,139)]), service = df2$TotalServerTime[c(136,137,138,139)], due = as.numeric(df2$DueTime[c(136,137,138,139)]), servers = 1)
+
+df2[c(136,137,138,139),]
+
+
+date1 = read.xlsx(xlsxFile="Assist Projections - All Games, modified inflow, with player tracking - Predicted Ramp.xlsx", sheet="Queue - HR ", startRow = 2, detectDates = TRUE, cols = c(1))
+time1 = read.xlsx(xlsxFile="Assist Projections - All Games, modified inflow, with player tracking - Predicted Ramp.xlsx", startRow = 2, sheet="Queue - HR ", cols = c(3))
+ArrivalTime = as.POSIXct(paste(date1$Date, "00:00:00 EST")) + 86400*(time1$Time)
+game1 = read.xlsx(xlsxFile="Assist Projections - All Games, modified inflow, with player tracking - Predicted Ramp.xlsx", sheet="Queue - HR ", startRow = 2, cols = seq(7,21))
+game1[is.na.data.frame(game1)] = 0
+game1$`PT.Danish.HRs-72`=game1$PT.Danish.HRs*(5/7)
+game1$`PT.Danish.HRs-24`=game1$PT.Danish.HRs*(2/7)
+game1$`PT.Champ.HRs-72`=game1$PT.Champ.HRs*(5/12)
+game1$`PT.Champ.HRs-24`=game1$PT.Champ.HRs*(7/12)
+df = data.frame(ArrivalTime, game1[c(seq(1,13),seq(16,19))])
+df2 = df %>% gather(Type, TotalServerTime, -ArrivalTime) %>% filter(TotalServerTime!=0)
+df2$ArrivalTime = as.POSIXct(df2$ArrivalTime , format = "%Y-%m-%d %h:%m:%s" , tz = "CDT") 
+df2 = df2[ order(df2$ArrivalTime),]
+cols = colnames(df)[2:18]
+df2$TurnAround = ifelse(df2$Type %in% cols[c(1,4,7)],43200,ifelse(df2$Type %in% cols[c(2,5,8,10,11,12,13,15,17)],86400,ifelse(df2$Type %in% cols[c(3,6,9,14,16)],518400,0)))
+df2$DueTime = df2$ArrivalTime + df2$TurnAround
+df2$AveTime = ifelse(df2$Type %in% cols[c(1,2,3)],110/60,ifelse(df2$Type %in% cols[c(4,5,6)],10/60,ifelse(df2$Type %in% cols[c(7,8,9)],20/60,ifelse(df2$Type %in% cols[c(10,11,12,13)],130/60,ifelse(df2$Type %in% cols[c(14,15,16,17)],120/60,0)))))
+df2$NumJobs = ceiling(df2$TotalServerTime/df2$AveTime)
+df2$ServerTime = df2$TotalServerTime/df2$NumJobs
+df2 = df2[rep(row.names(df2), df2$NumJobs),]
+#df2$TotalTime = 3600*queue_step(arrivals = as.numeric(df2$ArrivalTime), service = df2$ServerTime, due = as.numeric(df2$DueTime), servers = 11)$departures_df$system_time
+df2$TotalTime = 3600*finish_times(arrivals = as.numeric(df2$ArrivalTime), service = df2$ServerTime, due = as.numeric(df2$DueTime), servers = 11)$system_time
+df2$ServerNum = queue_step(arrivals = as.numeric(df2$ArrivalTime), service = df2$ServerTime, due = as.numeric(df2$DueTime), servers = 11)$departures_df$server
+df2$FinishTime = df2$ArrivalTime + df2$TotalTime
+df2$StartTime = df2$FinishTime - 3600*df2$ServerTime
+df2$OnTime = df2$DueTime > df2$FinishTime
+
+mean(df2$OnTime[seq(1,500)])
+
+
+arrivals = c(100,102,104,104,106,135,137)
+service = c(7,3,4,7,10,4,6)
+due = c(200,300,175,150,200,400,100)
+servers = 2
+
+finish_times(arrivals,service,due,servers)
+
+finish_times = function(arrivals, service, due, servers){
+  n = length(arrivals)
+  output = vector("numeric", (n+1) * 2 - 1)
+  queue_times = vector("numeric", servers)
+  h=0
+i=1
+due2 = due
+serv2 = service
+arr = arrivals
+arr2 = arrivals
+j=0
+repeat{
+  j=j+1
+  if (length(arrivals)==0){
+      break
+    }
+    qq = queue_times
+    queue = which.min(queue_times)
+    if (queue_times[queue] < arrivals[1]){
+      queue_times[queue] = max(c(arrivals[i], queue_times[queue])) + service[i]
+      i=1
+      output[min(which(arr2==arrivals[i]))] = queue_times[queue]
+      output[min(which(arr2==arrivals[i]))+n] = queue + 1
+      arr2[min(which(arr2==arrivals[i]))]=queue_times[queue]
+    } else{
+       i = which.min(due[1:binsearch(function(y) arrivals[y]-queue_times[queue], range=c(1,length(arrivals)))$where[1]])
+       
+      queue_times[queue] = queue_times[queue] + service[i]
+      
+      if (length(which(arrivals[i] == arr2))==1){
+        h = which(arrivals[i] == arr2)
+      } else{
+        h = min(which(min(due2[which(arrivals[i] == arr2)]) == due2))
+      }
+      
+      arr2[h] = queue_times[queue]
+      output[h] = queue_times[queue]
+      output[h+n] = queue + 1
+    }
+    arrivals=arr[which(arr == arr2)]
+    due=due2[which(arr == arr2)]
+    service=serv2[which(arr == arr2)]
+    if (test_expression) {
+   statement
+}
+}
+data = data.frame("arrivals"=arr,"service"=serv2,"departures"=output[1:length(arr)])
+data$waiting = data$departures - data$service-data$arrivals
+data$system_time = data$service + data$waiting
+  return(data)
+}
+
+if (j % 100 == 0){
+    print(j)
+  }
+
+j % 100 == 0
+
+
+
+
+for(i in 1:n){
+    queue = which.min(queue_times)
+    queue_times[queue] = max(c(arrivals[i], queue_times[queue])) + service[i]
+    
+    if (queue_times[queue] < arrivals[i]){
+      queue_times[queue] = max(c(arrivals[i], queue_times[queue])) + service[i]
+    } else{
+      arrivals[i:binsearch(function(y) arrivals[y]-queue_times[queue], range=c(1,           length(arrivals)))$where[1]][which.min(due[i:binsearch(function(y) arrivals[y]-queue_times[queue], range=c(1,length(arrivals)))$where[1]])]
+      
+      
+    }
+    
+    output[i] = queue_times[queue]
+    output[i + n] = queue + 1
+  }
+
+
+
+
+
+
+x <- c(4, 8, 15, 16, 23, 42)
+binsearch(function(y) x[y]-24, range=c(1, length(x)))$where[1]
+
+finish_times(arrivals, service, due, servers)
+
+
+queue_step(arrivals = arrivals, service = service, due=due, servers = servers)
+
+queue_pass(arrivals = arrivals, service = service, servers = servers)
+
+queue(arrivals = arrivals, service = service, due=due, servers = servers)
+
+df2[245:255,]
+
+queue(arrivals = as.numeric(df2$ArrivalTime), service = df2$ServerTime, due = as.numeric(df2$DueTime), servers = 11)
+
+
+ordstatement <- is.unsorted(arrivals)
+
+  # Order arrivals and service according to time
+
+  if(ordstatement){
+    ord <- order(arrivals, method = "radix")
+    due <- due[ord]
+    arrivals <- arrivals[ord]
+    service <- service[ord]
+  }
+
+
+
+
+qloop_numeric(arrivals, service, servers)
+
+
+queue_lengths(due, 0, c(105,108,112,119,129))
+
+
+arrivals <- cumsum(rexp(10))
+service <- rexp(10)
+queue_obj <- queue_step(arrivals, service, rev(arrivals))
+
+depart(queue_obj)
+queue_obj$departures_df$departures
+
+
+queue_step(arrivals = as.numeric(df2$ArrivalTime), service = df2$ServerTime, due = as.numeric(df2$DueTime), servers = 100)$departures_df[572:582,]
+
+queue_step(arrivals = as.numeric(df2$ArrivalTime[572:582]), service = df2$ServerTime[572:582], due = as.numeric(df2$DueTime[572:582]), servers = 1)$departures_df
+
+toy = df2[,]
+
+toy$AveTime = ifelse(df2$Type %in% cols[c(1,2,3)],110/60,ifelse(df2$Type %in% cols[c(4,5,6)],10/60,ifelse(df2$Type %in% cols[c(7,8,9)],20/60,ifelse(df2$Type %in% cols[c(10,11,12,13)],130/60,ifelse(df2$Type %in% cols[c(14,15,16,17)],120/60,0)))))
+
+toy$NumJobs = ceiling(toy$TotalServerTime/toy$AveTime)
+toy$ServerTime = toy$TotalServerTime/toy$NumJobs
+toy = toy[rep(row.names(toy), toy$NumJobs),]
+
+toy
+
+```
+
+
+
+
+queue_pass <- function(arrivals, service, servers){
+  UseMethod("queue_pass", servers)
+}
+
+
+queue_pass.numeric <- function(arrivals, service, servers){
+  stopifnot((servers%%1 == 0) & (servers > 0))
+  stopifnot(length(servers) == 1)
+  output <- qloop_numeric(arrivals, service, n_servers = servers)
+  return(output)
+}
+
+
+queue_pass.server.stepfun <- function(arrivals, service, servers){
+
+  x = c(servers$x, Inf)
+  y = c(servers$y, 1)
+
+  if(length(x) != 2){
+    if( any(max(service) >= diff(x))){
+      warning("Service times may span multiple server epochs. Results may not be 100% accurate")
+    }
+  }
+
+  output <- qloop_qq(arrivals, service, x, y)
+  return(output)
+}
+
+
+queue_pass.server.list <- function(arrivals, service, servers){
+  Number_of_queues <- length(servers)
+
+  queue_times <- mapply(next_function, servers, rep(0, Number_of_queues))
+  output <- rep(NA, length(arrivals))
+  queue_vector <- rep(NA,length(arrivals))
+
+  for(i in 1:length(arrivals)){
+    test_queue_times <- pmax.int(queue_times, arrivals[i])
+    new_queue_times <- mapply(next_function, servers, test_queue_times)
+    queue <- which.min(new_queue_times)
+
+    queue_times[queue] <- new_queue_times[queue] + service[i]
+    output[i] <- queue_times[queue]
+    queue_vector[i] <- queue
+  }
+  return(c(output, queue_vector, NA))
+}
+
+
+
+qloop_numeric <- function(times, service, n_servers) {
+    .Call('queuecomputer_qloop_numeric', PACKAGE = 'queuecomputer', times, service, n_servers)
+}
+
+qloop_qq <- function(times, service, x, y) {
+    .Call('queuecomputer_qloop_qq', PACKAGE = 'queuecomputer', times, service, x, y)
+}
+
+
+
+queue_lengths <- function(arrivals, service = 0, departures){
+
+  value <- NULL
+  key <- NULL
+  state <- NULL
+  times <- NULL
+  queuelength <- NULL
+
+  if(length(service) == 1){
+    stopifnot(service == 0)
+    check_queueinput(arrivals, service = departures)
+  } else {
+    check_queueinput(arrivals, service, departures)
+  }
+
+  queuedata <- tidyr::gather(
+    data.frame(
+      input = due,
+      output = departures - service
+    ),
+    factor_key = TRUE
+  )
+
+  state_df <- data.frame(
+    key = as.factor(c("input", "output")),
+    state = c(1, -1)
+  )
+
+  queuedata <- suppressMessages(
+    dplyr::left_join(queuedata, state_df)
+  )
+
+  # queuedata <- queuedata %>% arrange(value, key) %>% mutate(
+  #   QueueLength = cumsum(state),
+  #   time = value
+  # )
+
+  ord <- order(queuedata$value, queuedata$key, method = "radix")
+
+  queuedata <- queuedata[ord, ]
+
+  queuedata <- dplyr::mutate(
+    queuedata,
+    queuelength = cumsum(state),
+    times = value
+  )
+
+  queuedata <- dplyr::select(queuedata, times, queuelength)
+
+  zerodata <- data.frame(
+    times = 0, queuelength = 0
+  )
+
+  queuedata <- dplyr::bind_rows(zerodata, queuedata)
+
+  return(queuedata)
+
+}
