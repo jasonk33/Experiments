@@ -47,19 +47,41 @@ mean(df2$OnTime[seq(1,500)])
 
 as.numeric(dff$ArrivalTime)[1]-1501563500
 
-dff = df2[1:20000,]
+dff = df2[1:100000,]
 
 start=Sys.time()
-dff$TotalTime = finish_times(arrivals = as.numeric(dff$ArrivalTime)-1501563500, service = dff$ServerTime*3600, due = as.numeric(dff$DueTime)-1501563500, servers = 250)$system_time
+dff$TotalTime = finish_times(arrivals = as.numeric(dff$ArrivalTime)-1501563500, service = dff$ServerTime*3600, due = as.numeric(dff$DueTime)-1501563500, servers = 175)$system_time
 Sys.time()-start
 
 dff$FinishTime = dff$ArrivalTime + dff$TotalTime
 dff$StartTime = dff$FinishTime - 3600*dff$ServerTime
 dff$OnTime = dff$DueTime > dff$FinishTime
 dff$BeforeLastHour = dff$DueTime > dff$FinishTime + 3600
+dff$BeforeLast4Hour = dff$DueTime > dff$FinishTime + 14400
 
-mean(dff$OnTime[seq(1,10000)])
-mean(dff$BeforeLastHour[seq(1,10000)])
+mean(dff$OnTime[seq(1,100000)])
+mean(dff$BeforeLastHour[seq(1,100000)])
+mean(dff$BeforeLast4Hour[seq(1,100000)])
+
+
+
+dffd = df2[1:10000,]
+
+start=Sys.time()
+algorithm = finish_times(arrivals = as.numeric(dffd$ArrivalTime)-1501563500, service = dffd$ServerTime*3600, due = as.numeric(dffd$DueTime)-1501563500, servers = 25)
+Sys.time()-start
+dffd$TotalTime = algorithm$system_time
+dffd$FinishTime = dffd$ArrivalTime + dffd$TotalTime
+dffd$StartTime = dffd$FinishTime - 3600*dffd$ServerTime
+dffd$SevrerNum = algorithm$server_num
+dffd$OnTime = dffd$DueTime > dffd$FinishTime
+dffd$BeforeLastHour = dffd$DueTime > dffd$FinishTime + 3600
+dffd$BeforeLast4Hour = dffd$DueTime > dffd$FinishTime + 14400
+dffd$Idle_Num = algorithm$Idle_Num
+
+mean(dffd$OnTime[seq(1,10000)])
+mean(dffd$BeforeLastHour[seq(1,10000)])
+mean(dffd$BeforeLast4Hour[seq(1,10000)])
 
 
 arrivals = c(100,102,104,104,106,135,137,144,145,146,146)
@@ -77,38 +99,15 @@ service = c(6,.5,4,10)
 due = c(200,150,100,55)
 servers = 1
 
+arrivals = c(100,100,110,115)
+service = c(14,14,1,6)
+due = c(1,1,1,1)
+servers = 2
+
 finish_times(arrivals, service, due, servers)
 
 
 
-
-
-
-
-
-
-
-cppFunction('int add3(int x, int y, int z) {
-  int sum = x + y + z;
-  return sum;
-}')
-
-
-
-cppFunction('NumericVector max_elem5(NumericVector x) {
-  int max_elem = min(x);
-  return max_elem;
-}')
-
-
-
-evalCpp( "std::numeric_limits<double>::max()" )
-
-
-evalCpp( "NumericVector xx( y.begin(1), y.end(10) );" )
-
-
-max_elem5(c(1,2,3))
 
 
 finish_times = function(arrivals, service, due, servers){
@@ -121,17 +120,21 @@ due2 = due
 serv2 = service
 arr = arrivals
 arr2 = arrivals
+ServerNum = c()
+idle =c()
 for (j in 1:length(arr2)){
   if (j%%1000 == 0){
     print(j)
   }
+    idle[j] = sum(queue_times < arrivals[1])
     queue = which_minC(queue_times)
+    ServerNum[j] = queue
     if (queue_times[queue] < arrivals[1]){
       i=which_minC(due[arrivals[1]>=arrivals])
       queue_times[queue] = maxC(c(arrivals[i], queue_times[queue])) + service[i]
-      output[which(arr2==arrivals[i])[i]] = queue_times[queue]
-      output[which(arr2==arrivals[i])[i]+n] = queue + 1
-      arr2[which(arr2==arrivals[i])[i]]=queue_times[queue]
+      output[minC(which(arr2==arrivals[i])[arr[which(arr2==arrivals[i])]==arrivals[i]])] = queue_times[queue]
+      output[minC(which(arr2==arrivals[i])[arr[which(arr2==arrivals[i])]==arrivals[i]])+n] = queue + 1
+      arr2[minC(which(arr2==arrivals[i])[arr[which(arr2==arrivals[i])]==arrivals[i]])]=queue_times[queue]
     } else{
        i = which_minC(due[arrivals<=queue_times[queue]])
        queue_times[queue] = queue_times[queue] + service[i]
@@ -147,8 +150,13 @@ for (j in 1:length(arr2)){
 data = data.frame("arrivals"=arr,"service"=serv2,"departures"=output[1:length(arr)])
 data$waiting = data$departures - data$service-data$arrivals
 data$system_time = data$service + data$waiting
+data$server_num = ServerNum
+data$Idle_Num = idle
   return(data)
 }
+
+
+
 
 
 sum(dff$StartTime < dff$ArrivalTime)
