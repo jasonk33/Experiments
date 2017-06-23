@@ -82,7 +82,6 @@ for (j in 1:length(arr2)){
   if (j%%100 == 0){
     print(j)
   }
-    qq = queue_times
     queue = which.min(queue_times)
     if (queue_times[queue] < arrivals[1]){
       queue_times[queue] = max(c(arrivals[i], queue_times[queue])) + service[i]
@@ -94,12 +93,8 @@ for (j in 1:length(arr2)){
        i = which.min(due[1:binsearch(function(y) arrivals[y]-queue_times[queue], range=c(1,length(arrivals)))$where[1]])
        
       queue_times[queue] = queue_times[queue] + service[i]
-      
-      if (length(which(arrivals[i] == arr2))==1){
-        h = which(arrivals[i] == arr2)
-      } else{
+    
         h = which(arrivals[i] == arr2)[which.min(due2[which(arrivals[i] == arr2)])]
-      }
       
       arr2[h] = queue_times[queue]
       output[h] = queue_times[queue]
