@@ -47,14 +47,14 @@ mean(df2$OnTime[seq(1,500)])
 
 as.numeric(dff$ArrivalTime)[1]-1501563500
 
-dff = df2[1:20000,]
-dff$TotalTime = finish_times(arrivals = as.numeric(dff$ArrivalTime)-1501563500, service = dff$ServerTime*3600, due = as.numeric(dff$DueTime)-1501563500, servers = 100)$system_time
-#dff$ServerNum = finish_times(arrivals = as.numeric(dff$ArrivalTime), service = dff$ServerTime, due = as.numeric(dff$DueTime), servers = 11)$server
+dff = df2[1:60000,]
+dff$TotalTime = finish_times(arrivals = as.numeric(dff$ArrivalTime)-1501563500, service = dff$ServerTime*3600, due = as.numeric(dff$DueTime)-1501563500, servers = 150)$system_time
 dff$FinishTime = dff$ArrivalTime + dff$TotalTime
 dff$StartTime = dff$FinishTime - 3600*dff$ServerTime
 dff$OnTime = dff$DueTime > dff$FinishTime
 
-mean(dff$OnTime[seq(1,20000)])
+mean(dff$OnTime[seq(1,56750)])
+
 
 arrivals = c(100,102,104,104,106,135,137,144,145,146,146)
 service = c(7,3,4,7,10,4,6,4,4,4,4)
@@ -90,12 +90,9 @@ for (j in 1:length(arr2)){
       output[min(which(arr2==arrivals[i]))+n] = queue + 1
       arr2[min(which(arr2==arrivals[i]))]=queue_times[queue]
     } else{
-       i = which.min(due[1:binsearch(function(y) arrivals[y]-queue_times[queue], range=c(1,length(arrivals)))$where[1]])
-       
-      queue_times[queue] = queue_times[queue] + service[i]
-    
-        h = which(arrivals[i] == arr2)[which.min(due2[which(arrivals[i] == arr2)])]
-      
+       i = which.min(due[arrivals<=queue_times[queue]])
+       queue_times[queue] = queue_times[queue] + service[i]
+       h = which(arrivals[i] == arr2)[which.min(due2[which(arrivals[i] == arr2)])]
       arr2[h] = queue_times[queue]
       output[h] = queue_times[queue]
       output[h+n] = queue + 1
