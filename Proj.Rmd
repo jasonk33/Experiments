@@ -47,13 +47,15 @@ mean(df2$OnTime[seq(1,500)])
 
 as.numeric(dff$ArrivalTime)[1]-1501563500
 
-dff = df2[1:60000,]
-dff$TotalTime = finish_times(arrivals = as.numeric(dff$ArrivalTime)-1501563500, service = dff$ServerTime*3600, due = as.numeric(dff$DueTime)-1501563500, servers = 150)$system_time
+dff = df2[1:150000,]
+dff$TotalTime = finish_times(arrivals = as.numeric(dff$ArrivalTime)-1501563500, service = dff$ServerTime*3600, due = as.numeric(dff$DueTime)-1501563500, servers = 250)$system_time
 dff$FinishTime = dff$ArrivalTime + dff$TotalTime
 dff$StartTime = dff$FinishTime - 3600*dff$ServerTime
 dff$OnTime = dff$DueTime > dff$FinishTime
+dff$BeforeLastHour = dff$DueTime > dff$FinishTime + 3600
 
-mean(dff$OnTime[seq(1,56750)])
+mean(dff$OnTime[seq(1,150000)])
+mean(dff$BeforeLastHour[seq(1,150000)])
 
 
 arrivals = c(100,102,104,104,106,135,137,144,145,146,146)
@@ -66,9 +68,9 @@ service = c(4,4,4,4,4)
 due = c(200,200,200,500,600)
 servers = 2
 
-arrivals = c(144,144,145)
-service = c(.5,2,1)
-due = c(200,150,100)
+arrivals = c(100,104,107,107)
+service = c(6,.5,4,10)
+due = c(200,150,100,55)
 servers = 1
 
 finish_times(arrivals, service, due, servers)
@@ -91,7 +93,7 @@ for (j in 1:length(arr2)){
   }
     queue = which.min(queue_times)
     if (queue_times[queue] < arrivals[1]){
-      i=which.min(due2[arrivals[1]>=arrivals])
+      i=which.min(due[arrivals[1]>=arrivals])
       queue_times[queue] = max(c(arrivals[i], queue_times[queue])) + service[i]
       output[which(arr2==arrivals[i])[i]] = queue_times[queue]
       output[which(arr2==arrivals[i])[i]+n] = queue + 1
@@ -115,7 +117,7 @@ data$system_time = data$service + data$waiting
 }
 
 
-sum(dff$StartTime[1:58000] < dff$ArrivalTime[1:58000])
+sum(dff$StartTime < dff$ArrivalTime)
 
 
 for(i in 1:n){
