@@ -45,10 +45,23 @@ df2$OnTime = df2$DueTime > df2$FinishTime
 
 mean(df2$OnTime[seq(1,500)])
 
+as.numeric(dff$ArrivalTime)[1]-1501563500
 
-arrivals = c(100,102,104,104,106,135,137)
-service = c(7,3,4,7,10,4,6)
-due = c(200,300,175,150,200,400,100)
+dff = df2[1:10,]
+dff$TotalTime = 3600*finish_times(arrivals = as.numeric(dff$ArrivalTime)-1501563500, service = dff$ServerTime*3600, due = as.numeric(dff$DueTime)-1501563500, servers = 2)$system_time
+#dff$ServerNum = finish_times(arrivals = as.numeric(dff$ArrivalTime), service = dff$ServerTime, due = as.numeric(dff$DueTime), servers = 11)$server
+dff$FinishTime = dff$ArrivalTime + dff$TotalTime
+dff$StartTime = dff$FinishTime - 3600*dff$ServerTime
+dff$OnTime = dff$DueTime > dff$FinishTime
+
+arrivals = c(100,102,104,104,106,135,137,144,145,146,146)
+service = c(7,3,4,7,10,4,6,4,4,4,4)
+due = c(200,300,175,150,200,400,100,200,300,400,500)
+servers = 2
+
+arrivals = c(144,145,146,146,147)
+service = c(4,4,4,4,4)
+due = c(200,200,200,500,600)
 servers = 2
 
 finish_times(arrivals,service,due,servers)
@@ -63,12 +76,10 @@ due2 = due
 serv2 = service
 arr = arrivals
 arr2 = arrivals
-j=0
-repeat{
-  j=j+1
-  if (length(arrivals)==0){
-      break
-    }
+for (j in 1:length(arr2)){
+  if (j%%100 == 0){
+    print(j)
+  }
     qq = queue_times
     queue = which.min(queue_times)
     if (queue_times[queue] < arrivals[1]){
@@ -85,7 +96,7 @@ repeat{
       if (length(which(arrivals[i] == arr2))==1){
         h = which(arrivals[i] == arr2)
       } else{
-        h = min(which(min(due2[which(arrivals[i] == arr2)]) == due2))
+        h = which(arrivals[i] == arr2)[min(which(min(due2[which(arrivals[i] == arr2)]) == due2))]
       }
       
       arr2[h] = queue_times[queue]
@@ -95,9 +106,6 @@ repeat{
     arrivals=arr[which(arr == arr2)]
     due=due2[which(arr == arr2)]
     service=serv2[which(arr == arr2)]
-    if (test_expression) {
-   statement
-}
 }
 data = data.frame("arrivals"=arr,"service"=serv2,"departures"=output[1:length(arr)])
 data$waiting = data$departures - data$service-data$arrivals
@@ -105,11 +113,6 @@ data$system_time = data$service + data$waiting
   return(data)
 }
 
-if (j % 100 == 0){
-    print(j)
-  }
-
-j % 100 == 0
 
 
 
