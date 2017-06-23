@@ -65,10 +65,10 @@ mean(dff$BeforeLast4Hour[seq(1,100000)])
 
 
 
-dffd = df2[1:10000,]
+dffd = df2[1:60000,]
 
 start=Sys.time()
-algorithm = finish_times(arrivals = as.numeric(dffd$ArrivalTime)-1501563500, service = dffd$ServerTime*3600, due = as.numeric(dffd$DueTime)-1501563500, servers = 25)
+algorithm = finish_times(arrivals = as.numeric(dffd$ArrivalTime)-1501563500, service = dffd$ServerTime*3600, due = as.numeric(dffd$DueTime)-1501563500, servers = 150)
 Sys.time()-start
 dffd$TotalTime = algorithm$system_time
 dffd$FinishTime = dffd$ArrivalTime + dffd$TotalTime
@@ -79,10 +79,11 @@ dffd$BeforeLastHour = dffd$DueTime > dffd$FinishTime + 3600
 dffd$BeforeLast4Hour = dffd$DueTime > dffd$FinishTime + 14400
 dffd$Idle_Num = algorithm$Idle_Num
 
-mean(dffd$OnTime[seq(1,10000)])
-mean(dffd$BeforeLastHour[seq(1,10000)])
-mean(dffd$BeforeLast4Hour[seq(1,10000)])
+mean(dffd$OnTime[seq(1,56450)])
+mean(dffd$BeforeLastHour[seq(1,60000)])
+mean(dffd$BeforeLast4Hour[seq(1,60000)])
 
+max(which(dffd$Idle_Num != 0))
 
 arrivals = c(100,102,104,104,106,135,137,144,145,146,146)
 service = c(7,3,4,7,10,4,6,4,4,4,4)
