@@ -47,23 +47,23 @@ mean(df2$OnTime[seq(1,500)])
 
 as.numeric(dff$ArrivalTime)[1]-1501563500
 
-dff = df2[1:10000,]
+dff = df2[1:60000,]
 
 start=Sys.time()
-dff$TotalTime = finish_times(arrivals = as.numeric(dff$ArrivalTime)-1501563500, service = dff$ServerTime*3600, due = as.numeric(dff$DueTime)-1501563500, servers = 175)$system_time
+algorithm2 = finish_times(arrivals = as.numeric(dff$ArrivalTime)-1501563500, service = dff$ServerTime*3600, due = as.numeric(dff$DueTime)-1501563500, servers = 175)
 Sys.time()-start
-
+dff$TotalTime = algorithm3$system_time
 dff$FinishTime = dff$ArrivalTime + dff$TotalTime
 dff$StartTime = dff$FinishTime - 3600*dff$ServerTime
 dff$OnTime = dff$DueTime > dff$FinishTime
 dff$BeforeLastHour = dff$DueTime > dff$FinishTime + 3600
 dff$BeforeLast4Hour = dff$DueTime > dff$FinishTime + 14400
 
-mean(dff$OnTime[seq(1,10000)])
-mean(dff$BeforeLastHour[seq(1,10000)])
-mean(dff$BeforeLast4Hour[seq(1,10000)])
+mean(dff$OnTime[seq(1,150000)])
+mean(dff$BeforeLastHour[seq(1,150000)])
+mean(dff$BeforeLast4Hour[seq(1,150000)])
 
-
+sum(dff$ServerTime>dff$TotalTime)
 
 dffd = df2
 
@@ -79,9 +79,9 @@ dffd$BeforeLastHour = dffd$DueTime > dffd$FinishTime + 3600
 dffd$BeforeLast4Hour = dffd$DueTime > dffd$FinishTime + 14400
 dffd$Idle_Num = algorithm$Idle_Num
 
-mean(dffd$OnTime[seq(1,150000)])
-mean(dffd$BeforeLastHour[seq(1,150000)])
-mean(dffd$BeforeLast4Hour[seq(1,150000)])
+mean(dffd$OnTime[seq(1,393789)])
+mean(dffd$BeforeLastHour[seq(1,393000)])
+mean(dffd$BeforeLast4Hour[seq(1,393000)])
 
 
 
@@ -105,7 +105,77 @@ service = c(14,14,1,6)
 due = c(1,1,1,1)
 servers = 2
 
-finish_times(arrivals, service, due, servers)
+finish_times(arrivals, service, due, servers) == fin2(arrivals, service, due, servers)
+
+
+fin2(arrivals, service, due, servers)
+
+
+
+
+
+
+
+
+
+
+fin2 = function(arrivals, service, due, servers){
+n = length(arrivals)
+output = vector("numeric", (n+1) * 2 - 1)
+queue_times = vector("numeric", servers)
+h=0
+i=1
+due2 = due
+serv2 = service
+arr = arrivals
+arr2 = arrivals
+ServerNum = c()
+idle =c()
+max_arr = 2*max(arrivals)
+max_due = 2*max(due)
+for (j in 1:length(arr2)){
+  if (j%%1000 == 0){
+    print(j)
+  }
+    queue = which_minC(queue_times)
+    if (queue_times[queue] < minC(arrivals)){
+      i=which(arrivals==minC(arrivals))[which_minC(due[which(arrivals==minC(arrivals))])]
+      idle[i] = sum(queue_times < arrivals[i])
+      ServerNum[i] = queue
+      queue_times[queue] = arrivals[i] + service[i]
+      output[i] = queue_times[queue]
+      output[i+n] = queue + 1
+      arr2[i]=queue_times[queue]
+    } else{
+       i = which(arrivals<=queue_times[queue])[which_minC(due[which(arrivals<=queue_times[queue])])]
+       idle[i] = sum(queue_times < arrivals[i])
+        ServerNum[i] = queue
+       queue_times[queue] = queue_times[queue] + service[i]
+      arr2[i] = queue_times[queue]
+      output[i] = queue_times[queue]
+      output[i+n] = queue + 1
+    }
+    arrivals[i]=max_arr
+    due[i]=max_due
+}
+data = data.frame("arrivals"=arr,"service"=serv2,"departures"=output[1:length(arr)])
+data$waiting = data$departures - data$service-data$arrivals
+data$system_time = data$service + data$waiting
+data$server_num = ServerNum
+data$Idle_Num = idle
+  return(data)
+}
+
+
+
+
+
+
+
+
+
+
+
 
 
 
