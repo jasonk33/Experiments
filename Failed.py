@@ -1,0 +1,1 @@
+<function ExponentialFitter.fit.<locals>.<lambda> at 0x119499378>
